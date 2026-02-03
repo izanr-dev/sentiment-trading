@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENTIMENT TRADER | AI TERMINAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estética técnica tipo Terminal */
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #0f1115; /* Fondo oscuro profundo */
+            color: #e2e8f0;
+        }
+
+        .terminal-box {
+            background-color: #1a1d24;
+            border: 1px solid #2d3748;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-area {
+            background-color: #0f1115;
+            color: #a0aec0;
+            border: 1px solid #4a5568;
+        }
+        .input-area:focus {
+            outline: none;
+            border-color: #63b3ed;
+            color: #fff;
+        }
+
+        /* Colores semánticos financieros */
+        .bullish { color: #48bb78; } /* Verde */
+        .bearish { color: #f56565; } /* Rojo */
+        .neutral { color: #cbd5e0; } /* Gris */
+
+        /* Barra de Sentimiento Personalizada */
+        .meter-container {
+            height: 12px;
+            background: #2d3748;
+            position: relative;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .meter-fill {
+            height: 100%;
+            transition: width 0.5s ease, background-color 0.5s ease;
+        }
+        .marker {
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            width: 2px;
+            background: #fff;
+            z-index: 10;
+        }
+
+        /* Botones técnicos */
+        .btn-tech {
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.85rem;
+        }
+        .btn-tech:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.1);
+        }
+        .btn-tech:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <!-- HEADER -->
+    <header class="w-full max-w-4xl mb-6 flex justify-between items-center border-b border-gray-700 pb-4">
+        <div>
+            <h1 class="text-xl md:text-2xl font-bold tracking-tighter text-gray-100">
+                <span class="text-blue-500">///</span> SENTIMENT TRADER <span class="text-xs font-normal text-gray-500 ml-2">v1.0.4 BUILD</span>
+            </h1>
+            <p class="text-xs text-gray-500 mt-1">NLP FINANCIAL ANALYSIS & CALIBRATION ENGINE</p>
+        </div>
+        <div class="text-right hidden md:block">
+            <div class="text-xs text-gray-400">SYSTEM STATUS</div>
+            <div class="text-sm text-green-500 font-bold">ONLINE ●</div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- PANEL IZQUIERDO: INPUT -->
+        <div class="md:col-span-2 space-y-4">
+            
+            <!-- Entrada de Datos -->
+            <div class="terminal-box p-4 rounded">
+                <label class="block text-xs font-bold text-gray-400 mb-2 uppercase">Input Stream (Titulares en Inglés)</label>
+                <textarea id="newsInput" rows="6" 
+                    class="input-area w-full p-3 rounded text-sm font-mono"
+                    placeholder="Ej: FED raises interest rates, markets in fear...&#10;Oil prices drop significantly...&#10;Tech stocks surge after earnings report..."></textarea>
+                
+                <div class="flex justify-between mt-3">
+                    <button onclick="loadExample()" class="text-xs text-gray-500 hover:text-white underline">Cargar Ejemplo</button>
+                    <button onclick="analyzeSentiment()" 
+                        class="btn-tech bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold">
+                        EJECUTAR ANÁLISIS
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel de Resultados -->
+            <div id="resultPanel" class="terminal-box p-6 rounded opacity-50 pointer-events-none transition-opacity duration-300">
+                <div class="flex justify-between items-end mb-4">
+                    <div>
+                        <div class="text-xs text-gray-400 uppercase">Sentiment Score</div>
+                        <div id="scoreValue" class="text-3xl font-bold text-white">0.00</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-gray-400 uppercase">Recomendación IA</div>
+                        <div id="recommendationText" class="text-2xl font-bold text-gray-500">ESPERANDO DATOS</div>
+                    </div>
+                </div>
+
+                <!-- Visualizador Gráfico -->
+                <div class="relative w-full mb-6">
+                    <div class="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Pánico (-1.0)</span>
+                        <span>Neutro (0.0)</span>
+                        <span>Euforia (+1.0)</span>
+                    </div>
+                    <div class="meter-container w-full bg-gray-800 rounded relative">
+                        <!-- Marcadores de Umbral -->
+                        <div id="markerSell" class="marker bg-red-500 h-full w-0.5 absolute top-0" style="left: 30%"></div>
+                        <div id="markerBuy" class="marker bg-green-500 h-full w-0.5 absolute top-0" style="left: 70%"></div>
+                        <!-- Relleno -->
+                        <div id="meterBar" class="meter-fill bg-gray-600 w-1/2 mx-auto relative" style="width: 0%; left: 50%"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                        <span id="sellThresholdLabel">Venta: -0.20</span>
+                        <span id="buyThresholdLabel">Compra: 0.20</span>
+                    </div>
+                </div>
+
+                <!-- Sección de Calibración -->
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <p class="text-xs text-center text-gray-400 mb-3">FEEDBACK LOOP: ¿Qué hizo el mercado realmente?</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="trainModel('BAJO')" class="btn-tech bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-900 py-2 rounded">
+                            BAJÓ ▼
+                        </button>
+                        <button onclick="trainModel('NEUTRO')" class="btn-tech bg-gray-700/30 hover:bg-gray-700/50 text-gray-400 border border-gray-600 py-2 rounded">
+                            LATERAL =
+                        </button>
+                        <button onclick="trainModel('SUBIO')" class="btn-tech bg-green-900/30 hover:bg-green-900/50 text-green-400 border border-green-900 py-2 rounded">
+                            SUBIÓ ▲
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PANEL DERECHO: PARÁMETROS Y LOGS -->
+        <div class="space-y-4">
+            
+            <!-- Parámetros Internos -->
+            <div class="terminal-box p-4 rounded">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 border-b border-gray-700 pb-2">Parámetros del Modelo</h3>
+                <div class="space-y-3 font-mono text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Umbral Compra:</span>
+                        <span id="displayBuyThresh" class="text-green-400 font-bold">0.20</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Umbral Venta:</span>
+                        <span id="displaySellThresh" class="text-red-400 font-bold">-0.20</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Learning Rate:</span>
+                        <span class="text-blue-400">0.05</span>
+                    </div>
+                </div>
+                <button onclick="resetModel()" class="w-full mt-4 text-xs text-gray-600 hover:text-red-400 border border-gray-800 hover:border-red-900 p-1 rounded transition-colors">
+                    Resetear Memoria
+                </button>
+            </div>
+
+            <!-- System Log -->
+            <div class="terminal-box p-4 rounded h-64 flex flex-col">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Event Log</h3>
+                <div id="systemLog" class="flex-1 overflow-y-auto text-xs font-mono space-y-1 pr-2 text-gray-400">
+                    <div class="text-blue-500">>> Sistema inicializado...</div>
+                    <div class="text-gray-500">>> Esperando datos...</div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // --- 1. ESTADO DEL MODELO ---
+        // Intentamos cargar de localStorage o usar valores por defecto
+        let state = JSON.parse(localStorage.getItem('sentimentState')) || {
+            buyThreshold: 0.20,
+            sellThreshold: -0.20,
+            learningRate: 0.05
+        };
+
+        let lastAnalysis = {
+            score: 0,
+            recommendation: "NEUTRO"
+        };
+
+        // --- 2. DICCIONARIO FINANCIERO (Versión Simplificada JS) ---
+        const lexicon = {
+            // Negativas / Miedo
+            'bankruptcy': -3.5, 'default': -3.5, 'crisis': -3.0, 'crash': -3.5,
+            'war': -3.5, 'invasion': -3.5, 'panic': -3.0, 'collapse': -3.0,
+            'inflation': -1.5, 'loss': -2.0, 'down': -1.5, 'drop': -1.5,
+            'bearish': -2.5, 'volatile': -1.5, 'uncertainty': -1.5,
+            'sanctions': -2.0, 'recession': -2.5, 'plummet': -2.5,
+            
+            // Positivas / Esperanza
+            'growth': 2.0, 'record': 2.5, 'profit': 2.5, 'revenue': 1.5,
+            'bullish': 2.5, 'surge': 2.0, 'jump': 1.5, 'up': 1.0,
+            'recovery': 2.0, 'deal': 1.5, 'agreement': 1.5, 'beat': 2.0,
+            'strong': 1.5, 'gains': 2.0, 'dividend': 1.5, 'optimism': 1.5,
+            
+            // Contextuales
+            'hawkish': -1.5, // Tipos altos (malo bolsa)
+            'dovish': 1.5,   // Tipos bajos (bueno bolsa)
+            'hike': -1.0,    // Subida tipos
+            'cut': 1.0       // Bajada tipos
+        };
+
+        // --- 3. FUNCIONES CORE ---
+
+        function updateUI() {
+            // Actualizar visualización de umbrales
+            document.getElementById('displayBuyThresh').innerText = state.buyThreshold.toFixed(2);
+            document.getElementById('displaySellThresh').innerText = state.sellThreshold.toFixed(2);
+            document.getElementById('buyThresholdLabel').innerText = `Compra: ${state.buyThreshold.toFixed(2)}`;
+            document.getElementById('sellThresholdLabel').innerText = `Venta: ${state.sellThreshold.toFixed(2)}`;
+
+            // Mover las líneas del gráfico visualmente
+            // El rango es -1 a 1. Mapeamos a 0% - 100%.
+            // 0 (centro) es 50%. -1 es 0%. 1 es 100%.
+            const mapPos = (val) => ((val + 1) / 2) * 100;
+            
+            document.getElementById('markerSell').style.left = `${mapPos(state.sellThreshold)}%`;
+            document.getElementById('markerBuy').style.left = `${mapPos(state.buyThreshold)}%`;
+            
+            // Guardar estado
+            localStorage.setItem('sentimentState', JSON.stringify(state));
+        }
+
+        function log(msg, type = 'info') {
+            const logEl = document.getElementById('systemLog');
+            const entry = document.createElement('div');
+            
+            if (type === 'error') entry.className = 'text-red-400';
+            else if (type === 'success') entry.className = 'text-green-400';
+            else if (type === 'warn') entry.className = 'text-yellow-400';
+            else entry.className = 'text-gray-400';
+            
+            const time = new Date().toLocaleTimeString('es-ES', { hour12: false });
+            entry.innerText = `[${time}] ${msg}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function analyzeSentiment() {
+            const text = document.getElementById('newsInput').value.toLowerCase();
+            if (!text.trim()) {
+                log("Error: Input vacío.", 'error');
+                return;
+            }
+
+            // Tokenización básica
+            // Eliminamos puntuación y dividimos por espacios
+            const words = text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").split(/\s+/);
+            
+            let totalScore = 0;
+            let foundWords = 0;
+            
+            words.forEach(word => {
+                if (lexicon[word]) {
+                    totalScore += lexicon[word];
+                    foundWords++;
+                    // log(`Palabra detectada: ${word} (${lexicon[word]})`, 'info'); // Verbose
+                }
+            });
+
+            // Normalización simple para que esté entre -1 y 1 (aprox)
+            // Si hay muchas palabras, dividimos.
+            let finalScore = foundWords > 0 ? totalScore / (foundWords * 1.5) : 0;
+            // Clamping entre -1 y 1
+            finalScore = Math.max(-1, Math.min(1, finalScore));
+
+            lastAnalysis.score = finalScore;
+            
+            // DECISIÓN
+            let recText = "";
+            let recClass = "";
+            
+            if (finalScore >= state.buyThreshold) {
+                recText = "COMPRAR (BUY)";
+                recClass = "text-green-500";
+                lastAnalysis.recommendation = "COMPRAR";
+            } else if (finalScore <= state.sellThreshold) {
+                recText = "VENDER (SELL)";
+                recClass = "text-red-500";
+                lastAnalysis.recommendation = "VENDER";
+            } else {
+                recText = "MANTENER (HOLD)";
+                recClass = "text-gray-400";
+                lastAnalysis.recommendation = "NEUTRO";
+            }
+
+            // Renderizado Resultados
+            const resultPanel = document.getElementById('resultPanel');
+            resultPanel.classList.remove('opacity-50', 'pointer-events-none');
+            
+            document.getElementById('scoreValue').innerText = finalScore.toFixed(3);
+            const recEl = document.getElementById('recommendationText');
+            recEl.innerText = recText;
+            recEl.className = `text-2xl font-bold ${recClass}`;
+
+            // Actualizar barra gráfica
+            const bar = document.getElementById('meterBar');
+            const percentage = ((finalScore + 1) / 2) * 100; // Map -1..1 to 0..100
+            
+            // Truco CSS para que la barra crezca desde el centro
+            if (finalScore >= 0) {
+                bar.style.left = "50%";
+                bar.style.width = `${(finalScore / 2) * 100}%`;
+                bar.style.backgroundColor = "#48bb78";
+            } else {
+                const width = (Math.abs(finalScore) / 2) * 100;
+                bar.style.left = `${50 - width}%`;
+                bar.style.width = `${width}%`;
+                bar.style.backgroundColor = "#f56565";
+            }
+
+            log(`Análisis completado. Score: ${finalScore.toFixed(3)} | Rec: ${lastAnalysis.recommendation}`, 'success');
+        }
+
+        function trainModel(actualOutcome) {
+            // actualOutcome puede ser 'SUBIO', 'BAJO', 'NEUTRO'
+            const prediction = lastAnalysis.recommendation;
+            let msg = "";
+
+            // Lógica de Aprendizaje (Simplificada del informe)
+            if (prediction === "COMPRAR" && actualOutcome === "BAJO") {
+                state.buyThreshold += state.learningRate;
+                msg = "IA muy optimista. Subiendo umbral de compra.";
+            } else if (prediction === "VENDER" && actualOutcome === "SUBIO") {
+                state.sellThreshold -= state.learningRate;
+                msg = "IA muy pesimista. Bajando umbral de venta.";
+            } else if (prediction === "NEUTRO" && actualOutcome === "SUBIO") {
+                state.buyThreshold -= state.learningRate;
+                msg = "IA perdió oportunidad. Bajando umbral compra.";
+            } else if (prediction === "NEUTRO" && actualOutcome === "BAJO") {
+                state.sellThreshold += state.learningRate;
+                msg = "IA subestimó riesgo. Subiendo umbral venta.";
+            } else {
+                msg = "Predicción correcta o aceptable. Sin cambios.";
+            }
+
+            // Limites de seguridad para que los umbrales no se crucen locamente
+            if(state.buyThreshold < 0.05) state.buyThreshold = 0.05;
+            if(state.sellThreshold > -0.05) state.sellThreshold = -0.05;
+
+            log(`Entrenamiento: ${msg}`, 'warn');
+            updateUI();
+        }
+
+        function loadExample() {
+            document.getElementById('newsInput').value = 
+`Global markets in panic as war concerns escalate.
+Oil prices surge causing inflation fears.
+Investors are dumping risky assets.
+Tech stocks crash to yearly lows.`;
+            log("Datos de ejemplo cargados.");
+        }
+
+        function resetModel() {
+            if(confirm("¿Reiniciar el cerebro de la IA a valores de fábrica?")) {
+                state = { buyThreshold: 0.20, sellThreshold: -0.20, learningRate: 0.05 };
+                updateUI();
+                log("Sistema reseteado a valores por defecto.");
+            }
+        }
+
+        // Inicialización
+        updateUI();
+
+    </script>
+</body>
+</html>
