@@ -89,3 +89,39 @@ JavaScript (ES6+): Lógica de procesamiento de lenguaje natural en el cliente.
 Izan Robles.
 
 Este proyecto ha sido desarrollado con fines académicos y de investigación. El código es abierto para su revisión y mejora.
+
+</br>
+
+## 6. Escalabilidad y Hoja de Ruta (Roadmap)
+
+La versión actual funciona como una Prueba de Concepto (PoC) con aprendizaje en tiempo real. Para transformar este prototipo en un sistema de trading algorítmico profesional, se requiere la siguiente evolución arquitectónica:
+
+### 6.1. Persistencia de Datos y Arquitectura Backend
+
+Actualmente, el aprendizaje reside en la memoria temporal del navegador. Una implementación profesional requiere:
+
+Base de Datos de Series Temporales (TimescaleDB): Para almacenar millones de registros históricos de precios y titulares con precisión de milisegundos.
+
+APIs Institucionales: Conexión directa a Bloomberg o Reuters para la ingesta masiva de datos.
+
+### 6.2. Entrenamiento Supervisado con Datos Históricos (Deep Historical Learning)
+
+En lugar de aprender solo del presente (lo cual es lento y arriesgado al inicio), el sistema debe entrenarse con el pasado:
+
+Ingesta Masiva: Se alimenta al algoritmo con 20 años de noticias y movimientos bursátiles asociados (ej: Crisis 2008, Covid 2020).
+
+Aprendizaje de Patrones: El algoritmo procesa millones de pares "Noticia -> Reacción" para detectar correlaciones que un humano olvidaría.
+
+Resultado: El modelo sale a producción con una "experiencia" pre-adquirida equivalente a décadas de trading, sabiendo ya cómo reacciona el mercado ante guerras, pandemias o cambios de tipos de interés, sin necesidad de esperar a que ocurran de nuevo para aprender.
+
+### 6.3. Especialización de Índices (Index Fixation)
+
+Para aumentar la fiabilidad, se debe abandonar el enfoque generalista y entrenar modelos específicos por índice:
+
+Fijación de Objetivo: Un modelo entrenado exclusivamente con el S&P 500 filtrará el ruido de noticias irrelevantes que sí afectarían al Nikkei 225 o al IBEX 35.
+
+Sensibilidad Sectorial: Esto permite que el algoritmo aprenda que una subida del petróleo es mala para un índice de aerolíneas pero excelente para un índice energético, ajustando sus predicciones automáticamente.
+
+### 6.4. De Léxicos a LLMs (FinBERT)
+
+El siguiente salto cualitativo es sustituir el diccionario actual por modelos de lenguaje basados en Transformers (FinBERT). Estos modelos no solo suman puntos positivos/negativos, sino que entienden la sintaxis compleja, la ironía y las sutilezas de los comunicados de los Bancos Centrales.
