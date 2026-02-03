@@ -6,7 +6,7 @@ https://izanr-dev.github.io/sentiment-trading/
 
 </br> 
 
-## 1. Resumen Ejecutivo
+## 1. Resumen
 
 Este proyecto explora la intersección entre la Economía Conductual y la Inteligencia Artificial. El objetivo es demostrar empíricamente cómo la asimetría de la información y el sentimiento del mercado (miedo/euforia) influyen en la formación de precios a corto plazo, desafiando parcialmente la Hipótesis del Mercado Eficiente (EMH).
 
