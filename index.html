@@ -190,41 +190,38 @@
 
     </main>
 
-    <script>
-        // --- 1. ESTADO DEL MODELO ---
-        let state = JSON.parse(localStorage.getItem('sentimentState')) || {
-            buyThreshold: 0.20,
-            sellThreshold: -0.20,
-            learningRate: 0.05
-        };
-
-        let lastAnalysis = {
-            score: 0,
-            recommendation: "NEUTRO"
-        };
-
-        // --- 2. DICCIONARIO FINANCIERO ---
-        // Nota: Mantenemos tus valores, son correctos para "impacto", 
-        // pero ajustaremos la matemática para manejarlos mejor.
-        const lexicon = {
-            // Negativas / Miedo
+<script>
+        // --- 1. CONFIGURACIÓN Y ESTADO (PERSISTENTE) ---
+        
+        // Diccionario Base (Valores de fábrica)
+        const defaultLexicon = {
             'bankruptcy': -3.5, 'default': -3.5, 'crisis': -3.0, 'crash': -3.5,
             'war': -3.5, 'invasion': -3.5, 'panic': -3.0, 'collapse': -3.0,
             'inflation': -1.5, 'loss': -2.0, 'down': -1.5, 'drop': -1.5,
             'bearish': -2.5, 'volatile': -1.5, 'uncertainty': -1.5,
             'sanctions': -2.0, 'recession': -2.5, 'plummet': -2.5,
-            
-            // Positivas / Esperanza
             'growth': 2.0, 'record': 2.5, 'profit': 2.5, 'revenue': 1.5,
             'bullish': 2.5, 'surge': 2.0, 'jump': 1.5, 'up': 1.0,
             'recovery': 2.0, 'deal': 1.5, 'agreement': 1.5, 'beat': 2.0,
             'strong': 1.5, 'gains': 2.0, 'dividend': 1.5, 'optimism': 1.5,
-            
-            // Contextuales
             'hawkish': -1.5, 'dovish': 1.5, 'hike': -1.0, 'cut': 1.0
         };
 
-        // --- 3. FUNCIONES CORE ---
+        // Cargar estado o iniciar por defecto
+        let state = JSON.parse(localStorage.getItem('sentimentState_v2')) || {
+            buyThreshold: 0.20,
+            sellThreshold: -0.20,
+            learningRate: 0.10, // Aumentado para que notes el cambio más rápido
+            lexicon: defaultLexicon // Ahora el diccionario es parte del estado editable
+        };
+
+        let lastAnalysis = {
+            score: 0,
+            recommendation: "NEUTRO",
+            wordsFound: [] // Guardaremos qué palabras causaron el resultado
+        };
+
+        // --- 2. FUNCIONES DE UI ---
 
         function updateUI() {
             document.getElementById('displayBuyThresh').innerText = state.buyThreshold.toFixed(2);
@@ -233,11 +230,10 @@
             document.getElementById('sellThresholdLabel').innerText = `Venta: ${state.sellThreshold.toFixed(2)}`;
 
             const mapPos = (val) => ((val + 1) / 2) * 100;
-            
             document.getElementById('markerSell').style.left = `${mapPos(state.sellThreshold)}%`;
             document.getElementById('markerBuy').style.left = `${mapPos(state.buyThreshold)}%`;
             
-            localStorage.setItem('sentimentState', JSON.stringify(state));
+            localStorage.setItem('sentimentState_v2', JSON.stringify(state));
         }
 
         function log(msg, type = 'info') {
@@ -255,47 +251,46 @@
             logEl.scrollTop = logEl.scrollHeight;
         }
 
-        function analyzeSentiment() {
+        // --- 3. MOTOR DE ANÁLISIS ---
+
+        function analyzeSentiment(isReRun = false) {
             const text = document.getElementById('newsInput').value.toLowerCase();
             if (!text.trim()) {
-                log("Error: Input vacío.", 'error');
+                if(!isReRun) log("Error: Input vacío.", 'error');
                 return;
             }
 
-            // CORRECCIÓN 1: Mejor limpieza de texto (solo letras y espacios)
-            // Esto evita que "crisis." no coincida con "crisis"
+            // Limpieza
             const cleanText = text.replace(/[^a-z\s]/g, ''); 
             const words = cleanText.split(/\s+/);
             
             let totalScore = 0;
-            let foundWords = 0;
-            let detectedWordsLog = []; // Para debug
+            let foundWordsCount = 0;
+            let currentDetectedWords = []; 
             
+            // Usamos state.lexicon en lugar de una constante fija
             words.forEach(word => {
-                if (lexicon[word]) {
-                    totalScore += lexicon[word];
-                    foundWords++;
-                    detectedWordsLog.push(word);
+                if (state.lexicon[word] !== undefined) {
+                    totalScore += state.lexicon[word];
+                    foundWordsCount++;
+                    // Guardamos la palabra para saber a quién culpar luego
+                    currentDetectedWords.push(word); 
                 }
             });
 
-            // CORRECCIÓN 2: Ajuste de Normalización
-            // Antes dividías por (foundWords * 1.5). 
-            // Como tienes palabras de valor 3.5, necesitamos un divisor mayor (4.0) 
-            // para que una sola palabra fuerte no llegue inmediatamente al 100%.
             const NORMALIZER = 4.0; 
-
             let finalScore = 0;
-            if (foundWords > 0) {
-                finalScore = totalScore / (foundWords * NORMALIZER);
+            if (foundWordsCount > 0) {
+                finalScore = totalScore / (foundWordsCount * NORMALIZER);
             }
 
-            // Clamping entre -1 y 1
             finalScore = Math.max(-1, Math.min(1, finalScore));
 
+            // Guardamos datos para el entrenamiento
             lastAnalysis.score = finalScore;
+            lastAnalysis.wordsFound = currentDetectedWords;
             
-            // DECISIÓN
+            // Lógica de recomendación
             let recText = "";
             let recClass = "";
             
@@ -313,21 +308,19 @@
                 lastAnalysis.recommendation = "NEUTRO";
             }
 
-            // Renderizado Resultados
+            // Renderizar
             const resultPanel = document.getElementById('resultPanel');
             resultPanel.classList.remove('opacity-50', 'pointer-events-none');
             
-            document.getElementById('scoreValue').innerText = finalScore.toFixed(3); // 3 decimales
+            document.getElementById('scoreValue').innerText = finalScore.toFixed(3);
             const recEl = document.getElementById('recommendationText');
             recEl.innerText = recText;
             recEl.className = `text-2xl font-bold ${recClass}`;
 
-            // Actualizar barra gráfica
             const bar = document.getElementById('meterBar');
-            
             if (finalScore >= 0) {
                 bar.style.left = "50%";
-                bar.style.width = `${(finalScore / 2) * 100}%`; // Divide por 2 porque la mitad derecha es 50%
+                bar.style.width = `${(finalScore / 2) * 100}%`;
                 bar.style.backgroundColor = "#48bb78";
             } else {
                 const width = (Math.abs(finalScore) / 2) * 100;
@@ -336,36 +329,67 @@
                 bar.style.backgroundColor = "#f56565";
             }
 
-            log(`Detectadas: [${detectedWordsLog.join(', ')}]`, 'info');
-            log(`Score Raw: ${(totalScore/foundWords).toFixed(2)} -> Norm: ${finalScore.toFixed(3)}`, 'success');
+            if(!isReRun) {
+                log(`Analizado. Palabras clave: ${currentDetectedWords.length}`, 'success');
+            }
         }
 
-        function trainModel(actualOutcome) {
-            const prediction = lastAnalysis.recommendation;
-            let msg = "";
+        // --- 4. MOTOR DE APRENDIZAJE (BACKPROPAGATION SIMULADO) ---
 
-            if (prediction === "COMPRAR" && actualOutcome === "BAJO") {
-                state.buyThreshold += state.learningRate;
-                msg = "IA optimista. Ajustando umbral compra (+).";
-            } else if (prediction === "VENDER" && actualOutcome === "SUBIO") {
-                state.sellThreshold -= state.learningRate;
-                msg = "IA pesimista. Ajustando umbral venta (-).";
-            } else if (prediction === "NEUTRO" && actualOutcome === "SUBIO") {
-                state.buyThreshold -= state.learningRate;
-                msg = "Oportunidad perdida. Bajando umbral compra.";
-            } else if (prediction === "NEUTRO" && actualOutcome === "BAJO") {
-                state.sellThreshold += state.learningRate;
-                msg = "Riesgo no visto. Subiendo umbral venta.";
-            } else {
-                msg = "Predicción aceptable. Sin cambios.";
+        function trainModel(actualOutcome) {
+            if (lastAnalysis.wordsFound.length === 0) {
+                log("No puedo aprender: no detecté palabras clave en el texto.", 'error');
+                return;
             }
 
-            // Limites de seguridad
-            if(state.buyThreshold < 0.05) state.buyThreshold = 0.05;
-            if(state.sellThreshold > -0.05) state.sellThreshold = -0.05;
+            const prediction = lastAnalysis.recommendation;
+            let sentimentError = 0; // Dirección del ajuste
+            let msg = "";
 
-            log(`Training: ${msg}`, 'warn');
+            // Definimos el "Error": 
+            // Si yo dije SUBIR y BAJÓ, el error es negativo (necesito bajar pesos)
+            // Si yo dije BAJAR y SUBIÓ, el error es positivo (necesito subir pesos)
+            
+            if (prediction === "COMPRAR" && actualOutcome === "BAJO") {
+                sentimentError = -1; // Era demasiado optimista
+                msg = "Castigando palabras optimistas...";
+            } else if (prediction === "VENDER" && actualOutcome === "SUBIO") {
+                sentimentError = 1; // Era demasiado pesimista
+                msg = "Premiando palabras (reduciendo pesimismo)...";
+            } else if (prediction === "NEUTRO" && actualOutcome === "SUBIO") {
+                sentimentError = 0.5; // Debería haber sido más positivo
+                msg = "Aumentando peso positivo...";
+            } else if (prediction === "NEUTRO" && actualOutcome === "BAJO") {
+                sentimentError = -0.5; // Debería haber sido más negativo
+                msg = "Aumentando peso negativo...";
+            } else {
+                log("Feedback consistente con predicción. Sin cambios.", 'success');
+                return;
+            }
+
+            // BUCLE DE APRENDIZAJE (El corazón del cambio)
+            // Recorremos SOLO las palabras que aparecieron en el texto y ajustamos sus pesos
+            lastAnalysis.wordsFound.forEach(word => {
+                if (state.lexicon[word] !== undefined) {
+                    // Ajuste: Peso actual + (Dirección * Tasa de aprendizaje)
+                    const oldWeight = state.lexicon[word];
+                    state.lexicon[word] += (sentimentError * state.learningRate);
+                    
+                    // Debug opcional en consola
+                    console.log(`Ajustando ${word}: ${oldWeight.toFixed(2)} -> ${state.lexicon[word].toFixed(2)}`);
+                }
+            });
+
+            log(`Training: ${msg} (${lastAnalysis.wordsFound.length} palabras actualizadas)`, 'warn');
+            
+            // Guardar cambios
             updateUI();
+            
+            // RE-EJECUTAR AUTOMÁTICAMENTE para ver el nuevo resultado
+            setTimeout(() => {
+                log("Re-calculando con nuevos pesos...", 'info');
+                analyzeSentiment(true);
+            }, 500);
         }
 
         function loadExample() {
@@ -378,10 +402,9 @@ Tech stocks crash to yearly lows.`;
         }
 
         function resetModel() {
-            if(confirm("¿Reiniciar el cerebro de la IA?")) {
-                state = { buyThreshold: 0.20, sellThreshold: -0.20, learningRate: 0.05 };
-                updateUI();
-                log("Sistema reseteado a fábrica.");
+            if(confirm("¿Reiniciar red neuronal a valores de fábrica?")) {
+                localStorage.removeItem('sentimentState_v2');
+                location.reload(); // Recarga simple para limpiar todo
             }
         }
 
