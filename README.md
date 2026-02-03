@@ -8,7 +8,7 @@ https://izanr-dev.github.io/sentiment-trading/
 
 ## 1. Resumen
 
-Este proyecto explora la intersección entre la Economía Conductual y la Inteligencia Artificial. El objetivo es demostrar empíricamente cómo la asimetría de la información y el sentimiento del mercado (miedo/euforia) influyen en la formación de precios a corto plazo, desafiando parcialmente la Hipótesis del Mercado Eficiente (EMH).
+Este proyecto explora la intersección entre la Economía Conductual y la Inteligencia Artificial. El objetivo es demostrar cómo el sentimiento del mercado (miedo/euforia) influye en la formación de precios a corto plazo, desafiando parcialmente la Hipótesis del Mercado Eficiente (EMH).
 
 Se ha desarrollado una herramienta de Procesamiento de Lenguaje Natural (NLP) que utiliza léxicos financieros especializados para cuantificar el "estado de ánimo" de las noticias y generar señales de trading. Además, implementa un sistema de aprendizaje adaptativo que calibra sus umbrales de riesgo basándose en la retroalimentación del usuario sobre el movimiento real del mercado.
 
