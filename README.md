@@ -1,18 +1,22 @@
-Sentiment Trader: Análisis de Mercado mediante NLP y Economía Conductual
+# Sentiment Trader: Análisis de Mercado mediante NLP y Economía Conductual
 
 https://izanr-dev.github.io/sentiment-trading/
 
-(Nota: Esta aplicación se ejecuta completamente en tu navegador. No requiere instalación.)
 
-1. Resumen Ejecutivo
+
+</br> 
+
+## 1. Resumen Ejecutivo
 
 Este proyecto explora la intersección entre la Economía Conductual y la Inteligencia Artificial. El objetivo es demostrar empíricamente cómo la asimetría de la información y el sentimiento del mercado (miedo/euforia) influyen en la formación de precios a corto plazo, desafiando parcialmente la Hipótesis del Mercado Eficiente (EMH).
 
 Se ha desarrollado una herramienta de Procesamiento de Lenguaje Natural (NLP) que utiliza léxicos financieros especializados para cuantificar el "estado de ánimo" de las noticias y generar señales de trading. Además, implementa un sistema de aprendizaje adaptativo que calibra sus umbrales de riesgo basándose en la retroalimentación del usuario sobre el movimiento real del mercado.
 
-2. Fundamentación Económica
+</br>
 
-2.1. ¿Sienten los Mercados? Crítica a la Eficiencia
+## 2. Fundamentación Económica
+
+### 2.1. ¿Sienten los Mercados? Crítica a la Eficiencia
 
 En teoría, la bolsa debería ser un mecanismo racional que descuenta toda la información instantáneamente. En la práctica, los mercados exhiben comportamientos irracionales documentados por la economía conductual:
 
@@ -20,7 +24,7 @@ Asimetría del Miedo (Loss Aversion): Los inversores reaccionan con mayor rapide
 
 Comportamiento de Manada (Herding): En momentos de alta incertidumbre (VIX alto), los inversores tienden a ignorar sus propios análisis fundamentales y siguen la tendencia predominante, exacerbando las caídas (pánico) o las burbujas (euforia).
 
-2.2. Casos de Estudio Históricos
+### 2.2. Casos de Estudio Históricos
 
 El algoritmo se ha diseñado observando fenómenos de mercado recientes:
 
@@ -28,11 +32,13 @@ El COVID-19 (El sesgo de normalidad): Inicialmente, el mercado ignoró el riesgo
 
 La Guerra de Ucrania (La paradoja de la incertidumbre): El mercado cayó antes de la invasión debido a la incertidumbre ("Sell the rumor"). El día de la invasión, el mercado subió ("Buy the news"). Esto demuestra que el mercado penaliza más la incertidumbre que las malas noticias confirmadas.
 
-3. Implementación Técnica
+</br>
+
+## 3. Implementación Técnica
 
 Para solucionar la incapacidad de los modelos de lenguaje genéricos para entender el contexto financiero, se ha implementado la siguiente arquitectura:
 
-3.1. El Problema Semántico y el Léxico Loughran-McDonald
+### 3.1. El Problema Semántico y el Léxico Loughran-McDonald
 
 Un diccionario estándar considera palabras como "liability" (pasivo), "risk" (riesgo) o "crude" (petróleo crudo) como negativas. En finanzas, son términos operativos neutros.
 
@@ -40,7 +46,7 @@ Solución: Implementación del Léxico Loughran-McDonald, diseñado específicam
 
 Resultado: El algoritmo distingue entre "coste operativo" (neutro) y "litigio imprevisto" (negativo fuerte).
 
-3.2. Algoritmo de Calibración Dinámica (Regime Switching)
+### 3.2. Algoritmo de Calibración Dinámica (Regime Switching)
 
 El sistema no utiliza reglas estáticas (if score > 0.5 then buy). En su lugar, utiliza un bucle de retroalimentación simple para adaptarse al régimen de volatilidad:
 
@@ -56,7 +62,9 @@ Si el sistema fue demasiado pesimista (Recomendó vender y el mercado subió), r
 
 Esto simula a un trader humano que se vuelve más cauto tras una pérdida y más confiado tras un acierto.
 
-4. Guía de Uso de la Herramienta
+</br>
+
+## 4. Guía de Uso de la Herramienta
 
 La interfaz ha sido diseñada para emular una terminal financiera profesional (tipo Bloomberg), priorizando la funcionalidad y la velocidad de lectura de datos.
 
@@ -70,14 +78,14 @@ Visualización: Una barra de progreso mostrará la posición del sentimiento res
 
 Entrenamiento (Feedback Loop): Utilice los botones inferiores (BAJÓ, LATERAL, SUBIÓ) para informar a la IA de qué hizo realmente el mercado. Observe cómo los parámetros Umbral Compra y Umbral Venta se ajustan en tiempo real en el panel derecho.
 
-5. Stack Tecnológico
+</br>
+
+## 5. Stack Tecnológico
 
 HTML5 / CSS3 (Tailwind): Interfaz reactiva y ligera sin frameworks pesados.
 
 JavaScript (ES6+): Lógica de procesamiento de lenguaje natural en el cliente.
 
-LocalStorage: Persistencia de datos para "recordar" el entrenamiento del usuario entre sesiones.
-
-Autor y Licencia
+Izan Robles.
 
 Este proyecto ha sido desarrollado con fines académicos y de investigación. El código es abierto para su revisión y mejora.
