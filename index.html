@@ -32,11 +32,6 @@
             color: #fff;
         }
 
-        /* Colores semánticos financieros */
-        .bullish { color: #48bb78; } /* Verde */
-        .bearish { color: #f56565; } /* Rojo */
-        .neutral { color: #cbd5e0; } /* Gris */
-
         /* Barra de Sentimiento Personalizada */
         .meter-container {
             height: 12px;
@@ -47,7 +42,7 @@
         }
         .meter-fill {
             height: 100%;
-            transition: width 0.5s ease, background-color 0.5s ease;
+            transition: width 0.5s ease, background-color 0.5s ease, left 0.5s ease;
         }
         .marker {
             position: absolute;
@@ -56,6 +51,7 @@
             width: 2px;
             background: #fff;
             z-index: 10;
+            opacity: 0.7;
         }
 
         /* Botones técnicos */
@@ -76,11 +72,10 @@
 </head>
 <body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
 
-    <!-- HEADER -->
     <header class="w-full max-w-4xl mb-6 flex justify-between items-center border-b border-gray-700 pb-4">
         <div>
             <h1 class="text-xl md:text-2xl font-bold tracking-tighter text-gray-100">
-                <span class="text-blue-500">///</span> SENTIMENT TRADER <span class="text-xs font-normal text-gray-500 ml-2">v1.0.4 BUILD</span>
+                <span class="text-blue-500">///</span> SENTIMENT TRADER <span class="text-xs font-normal text-gray-500 ml-2">v1.1.0 FIXED</span>
             </h1>
             <p class="text-xs text-gray-500 mt-1">NLP FINANCIAL ANALYSIS & CALIBRATION ENGINE</p>
         </div>
@@ -92,10 +87,8 @@
 
     <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6">
 
-        <!-- PANEL IZQUIERDO: INPUT -->
         <div class="md:col-span-2 space-y-4">
             
-            <!-- Entrada de Datos -->
             <div class="terminal-box p-4 rounded">
                 <label class="block text-xs font-bold text-gray-400 mb-2 uppercase">Input Stream (Titulares en Inglés)</label>
                 <textarea id="newsInput" rows="6" 
@@ -111,7 +104,6 @@
                 </div>
             </div>
 
-            <!-- Panel de Resultados -->
             <div id="resultPanel" class="terminal-box p-6 rounded opacity-50 pointer-events-none transition-opacity duration-300">
                 <div class="flex justify-between items-end mb-4">
                     <div>
@@ -124,7 +116,6 @@
                     </div>
                 </div>
 
-                <!-- Visualizador Gráfico -->
                 <div class="relative w-full mb-6">
                     <div class="flex justify-between text-xs text-gray-600 mb-1">
                         <span>Pánico (-1.0)</span>
@@ -132,10 +123,8 @@
                         <span>Euforia (+1.0)</span>
                     </div>
                     <div class="meter-container w-full bg-gray-800 rounded relative">
-                        <!-- Marcadores de Umbral -->
                         <div id="markerSell" class="marker bg-red-500 h-full w-0.5 absolute top-0" style="left: 30%"></div>
                         <div id="markerBuy" class="marker bg-green-500 h-full w-0.5 absolute top-0" style="left: 70%"></div>
-                        <!-- Relleno -->
                         <div id="meterBar" class="meter-fill bg-gray-600 w-1/2 mx-auto relative" style="width: 0%; left: 50%"></div>
                     </div>
                     <div class="flex justify-between text-[10px] text-gray-500 mt-1">
@@ -144,7 +133,6 @@
                     </div>
                 </div>
 
-                <!-- Sección de Calibración -->
                 <div class="border-t border-gray-700 pt-4 mt-4">
                     <p class="text-xs text-center text-gray-400 mb-3">FEEDBACK LOOP: ¿Qué hizo el mercado realmente?</p>
                     <div class="grid grid-cols-3 gap-3">
@@ -163,10 +151,8 @@
 
         </div>
 
-        <!-- PANEL DERECHO: PARÁMETROS Y LOGS -->
         <div class="space-y-4">
             
-            <!-- Parámetros Internos -->
             <div class="terminal-box p-4 rounded">
                 <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 border-b border-gray-700 pb-2">Parámetros del Modelo</h3>
                 <div class="space-y-3 font-mono text-sm">
@@ -182,13 +168,16 @@
                         <span class="text-gray-500">Learning Rate:</span>
                         <span class="text-blue-400">0.05</span>
                     </div>
+                    <div class="flex justify-between border-t border-gray-800 pt-2 mt-2">
+                        <span class="text-gray-600">Normalization:</span>
+                        <span class="text-yellow-600">4.0x</span>
+                    </div>
                 </div>
                 <button onclick="resetModel()" class="w-full mt-4 text-xs text-gray-600 hover:text-red-400 border border-gray-800 hover:border-red-900 p-1 rounded transition-colors">
                     Resetear Memoria
                 </button>
             </div>
 
-            <!-- System Log -->
             <div class="terminal-box p-4 rounded h-64 flex flex-col">
                 <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Event Log</h3>
                 <div id="systemLog" class="flex-1 overflow-y-auto text-xs font-mono space-y-1 pr-2 text-gray-400">
@@ -203,7 +192,6 @@
 
     <script>
         // --- 1. ESTADO DEL MODELO ---
-        // Intentamos cargar de localStorage o usar valores por defecto
         let state = JSON.parse(localStorage.getItem('sentimentState')) || {
             buyThreshold: 0.20,
             sellThreshold: -0.20,
@@ -215,7 +203,9 @@
             recommendation: "NEUTRO"
         };
 
-        // --- 2. DICCIONARIO FINANCIERO (Versión Simplificada JS) ---
+        // --- 2. DICCIONARIO FINANCIERO ---
+        // Nota: Mantenemos tus valores, son correctos para "impacto", 
+        // pero ajustaremos la matemática para manejarlos mejor.
         const lexicon = {
             // Negativas / Miedo
             'bankruptcy': -3.5, 'default': -3.5, 'crisis': -3.0, 'crash': -3.5,
@@ -231,30 +221,22 @@
             'strong': 1.5, 'gains': 2.0, 'dividend': 1.5, 'optimism': 1.5,
             
             // Contextuales
-            'hawkish': -1.5, // Tipos altos (malo bolsa)
-            'dovish': 1.5,   // Tipos bajos (bueno bolsa)
-            'hike': -1.0,    // Subida tipos
-            'cut': 1.0       // Bajada tipos
+            'hawkish': -1.5, 'dovish': 1.5, 'hike': -1.0, 'cut': 1.0
         };
 
         // --- 3. FUNCIONES CORE ---
 
         function updateUI() {
-            // Actualizar visualización de umbrales
             document.getElementById('displayBuyThresh').innerText = state.buyThreshold.toFixed(2);
             document.getElementById('displaySellThresh').innerText = state.sellThreshold.toFixed(2);
             document.getElementById('buyThresholdLabel').innerText = `Compra: ${state.buyThreshold.toFixed(2)}`;
             document.getElementById('sellThresholdLabel').innerText = `Venta: ${state.sellThreshold.toFixed(2)}`;
 
-            // Mover las líneas del gráfico visualmente
-            // El rango es -1 a 1. Mapeamos a 0% - 100%.
-            // 0 (centro) es 50%. -1 es 0%. 1 es 100%.
             const mapPos = (val) => ((val + 1) / 2) * 100;
             
             document.getElementById('markerSell').style.left = `${mapPos(state.sellThreshold)}%`;
             document.getElementById('markerBuy').style.left = `${mapPos(state.buyThreshold)}%`;
             
-            // Guardar estado
             localStorage.setItem('sentimentState', JSON.stringify(state));
         }
 
@@ -280,24 +262,34 @@
                 return;
             }
 
-            // Tokenización básica
-            // Eliminamos puntuación y dividimos por espacios
-            const words = text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").split(/\s+/);
+            // CORRECCIÓN 1: Mejor limpieza de texto (solo letras y espacios)
+            // Esto evita que "crisis." no coincida con "crisis"
+            const cleanText = text.replace(/[^a-z\s]/g, ''); 
+            const words = cleanText.split(/\s+/);
             
             let totalScore = 0;
             let foundWords = 0;
+            let detectedWordsLog = []; // Para debug
             
             words.forEach(word => {
                 if (lexicon[word]) {
                     totalScore += lexicon[word];
                     foundWords++;
-                    // log(`Palabra detectada: ${word} (${lexicon[word]})`, 'info'); // Verbose
+                    detectedWordsLog.push(word);
                 }
             });
 
-            // Normalización simple para que esté entre -1 y 1 (aprox)
-            // Si hay muchas palabras, dividimos.
-            let finalScore = foundWords > 0 ? totalScore / (foundWords * 1.5) : 0;
+            // CORRECCIÓN 2: Ajuste de Normalización
+            // Antes dividías por (foundWords * 1.5). 
+            // Como tienes palabras de valor 3.5, necesitamos un divisor mayor (4.0) 
+            // para que una sola palabra fuerte no llegue inmediatamente al 100%.
+            const NORMALIZER = 4.0; 
+
+            let finalScore = 0;
+            if (foundWords > 0) {
+                finalScore = totalScore / (foundWords * NORMALIZER);
+            }
+
             // Clamping entre -1 y 1
             finalScore = Math.max(-1, Math.min(1, finalScore));
 
@@ -325,19 +317,17 @@
             const resultPanel = document.getElementById('resultPanel');
             resultPanel.classList.remove('opacity-50', 'pointer-events-none');
             
-            document.getElementById('scoreValue').innerText = finalScore.toFixed(3);
+            document.getElementById('scoreValue').innerText = finalScore.toFixed(3); // 3 decimales
             const recEl = document.getElementById('recommendationText');
             recEl.innerText = recText;
             recEl.className = `text-2xl font-bold ${recClass}`;
 
             // Actualizar barra gráfica
             const bar = document.getElementById('meterBar');
-            const percentage = ((finalScore + 1) / 2) * 100; // Map -1..1 to 0..100
             
-            // Truco CSS para que la barra crezca desde el centro
             if (finalScore >= 0) {
                 bar.style.left = "50%";
-                bar.style.width = `${(finalScore / 2) * 100}%`;
+                bar.style.width = `${(finalScore / 2) * 100}%`; // Divide por 2 porque la mitad derecha es 50%
                 bar.style.backgroundColor = "#48bb78";
             } else {
                 const width = (Math.abs(finalScore) / 2) * 100;
@@ -346,36 +336,35 @@
                 bar.style.backgroundColor = "#f56565";
             }
 
-            log(`Análisis completado. Score: ${finalScore.toFixed(3)} | Rec: ${lastAnalysis.recommendation}`, 'success');
+            log(`Detectadas: [${detectedWordsLog.join(', ')}]`, 'info');
+            log(`Score Raw: ${(totalScore/foundWords).toFixed(2)} -> Norm: ${finalScore.toFixed(3)}`, 'success');
         }
 
         function trainModel(actualOutcome) {
-            // actualOutcome puede ser 'SUBIO', 'BAJO', 'NEUTRO'
             const prediction = lastAnalysis.recommendation;
             let msg = "";
 
-            // Lógica de Aprendizaje (Simplificada del informe)
             if (prediction === "COMPRAR" && actualOutcome === "BAJO") {
                 state.buyThreshold += state.learningRate;
-                msg = "IA muy optimista. Subiendo umbral de compra.";
+                msg = "IA optimista. Ajustando umbral compra (+).";
             } else if (prediction === "VENDER" && actualOutcome === "SUBIO") {
                 state.sellThreshold -= state.learningRate;
-                msg = "IA muy pesimista. Bajando umbral de venta.";
+                msg = "IA pesimista. Ajustando umbral venta (-).";
             } else if (prediction === "NEUTRO" && actualOutcome === "SUBIO") {
                 state.buyThreshold -= state.learningRate;
-                msg = "IA perdió oportunidad. Bajando umbral compra.";
+                msg = "Oportunidad perdida. Bajando umbral compra.";
             } else if (prediction === "NEUTRO" && actualOutcome === "BAJO") {
                 state.sellThreshold += state.learningRate;
-                msg = "IA subestimó riesgo. Subiendo umbral venta.";
+                msg = "Riesgo no visto. Subiendo umbral venta.";
             } else {
-                msg = "Predicción correcta o aceptable. Sin cambios.";
+                msg = "Predicción aceptable. Sin cambios.";
             }
 
-            // Limites de seguridad para que los umbrales no se crucen locamente
+            // Limites de seguridad
             if(state.buyThreshold < 0.05) state.buyThreshold = 0.05;
             if(state.sellThreshold > -0.05) state.sellThreshold = -0.05;
 
-            log(`Entrenamiento: ${msg}`, 'warn');
+            log(`Training: ${msg}`, 'warn');
             updateUI();
         }
 
@@ -389,10 +378,10 @@ Tech stocks crash to yearly lows.`;
         }
 
         function resetModel() {
-            if(confirm("¿Reiniciar el cerebro de la IA a valores de fábrica?")) {
+            if(confirm("¿Reiniciar el cerebro de la IA?")) {
                 state = { buyThreshold: 0.20, sellThreshold: -0.20, learningRate: 0.05 };
                 updateUI();
-                log("Sistema reseteado a valores por defecto.");
+                log("Sistema reseteado a fábrica.");
             }
         }
 
